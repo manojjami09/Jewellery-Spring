@@ -2,47 +2,91 @@
 import { useState, useEffect, useContext } from "react";
 import { useParams } from "react-router";
 import Navbar from "../../components/Navbar";
-import CartContext from "../../context/CartContext";
 import { BsPlusSquare, BsDashSquare } from "react-icons/bs";
-import Cookies from "js-cookie";   // ✅ import Cookies
+import Cookies from "js-cookie";
+import axios from "axios";
 import "./index.css";
+import jwtDecode from "jwt-decode";
+import CartContext from "../../context/CartContext"; // ✅ import context
 
 const NewArrivalItem = () => {
-  const [product, setProduct] = useState(null);
+  const [newArrival, setNewArrival] = useState(null);
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
-  const { addCartItem } = useContext(CartContext);
 
-  const onClickAddToCart = () => {
-    addCartItem({ ...product, quantity });
-    setIsAdded(true);
+  // ✅ use CartContext
+  const { setCartList } = useContext(CartContext);
+
+  // ✅ Add to Cart for New Arrival
+  // ✅ Add to Cart for New Arrival
+  const onClickAddToCart = async () => {
+    try {
+      const token = Cookies.get("jwt_token");
+      if (!token) {
+        alert("Please login first!");
+        return;
+      }
+
+      const decoded = jwtDecode(token);
+      const userId = decoded.userId;
+
+      // ✅ use correct backend endpoint: /add
+      const response = await axios.post(
+        `http://localhost:8080/api/cart/${userId}/add`,
+        null,
+        {
+          params: {
+            newArrivalId: newArrival.id, // ✅ matches your backend @RequestParam
+            quantity,
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Cart updated:", response.data);
+
+      // ✅ Immediately update cartList in context
+      setCartList(response.data.items || []);
+
+      setIsAdded(true);
+    } catch (error) {
+      console.error("Error adding new arrival to cart:", error);
+      alert("Failed to add item. Please try again.");
+    }
   };
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const token = Cookies.get("jwt_token"); // ✅ read JWT from cookies
 
-        const response = await fetch(`http://localhost:8080/api/newArrivals/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,  // ✅ attach token
-            "Content-Type": "application/json"
-          },
-        });
+  // ✅ Fetch new arrival details
+  useEffect(() => {
+    const fetchNewArrival = async () => {
+      try {
+        const token = Cookies.get("jwt_token");
+
+        const response = await fetch(
+          `http://localhost:8080/api/newArrivals/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!response.ok) throw new Error("Failed to fetch new arrival");
         const data = await response.json();
-        setProduct(data);
+        setNewArrival(data);
       } catch (error) {
         console.error("Error fetching new arrival:", error);
       }
     };
 
-    fetchProduct();
+    fetchNewArrival();
   }, [id]);
 
-  if (!product) {
+  if (!newArrival) {
     return (
       <div className="loading-container">
         <p>Loading new arrival...</p>
@@ -58,7 +102,7 @@ const NewArrivalItem = () => {
     setQuantity((prev) => prev + 1);
   };
 
-  const { name, price, image } = product;
+  const { name, price, image } = newArrival;
 
   return (
     <>
@@ -91,8 +135,8 @@ const NewArrivalItem = () => {
 
             <hr />
             <p className="product-offer">
-              Buy 3 at 3003 Use Code : MID3003 at checkout. <br />
-              Buy 1 Get 1 Free Use Code : B1G1 at checkout.
+              Special New Arrival Discount 🎉 <br />
+              Limited stock – grab yours now!
             </p>
             <hr />
             <p className="product-stock">In stock - ready to ship</p>

@@ -1,28 +1,28 @@
-import { BsPlusSquare, BsDashSquare } from 'react-icons/bs';
-import { AiFillCloseCircle } from 'react-icons/ai';
-import { useContext } from 'react';
-import CartContext from '../../context/CartContext';
+import { BsPlusSquare, BsDashSquare } from "react-icons/bs";
+import { AiFillCloseCircle } from "react-icons/ai";
+import { useContext } from "react";
+import CartContext from "../../context/CartContext";
+import "./index.css";
 
-import './index.css';
+const CartItem = ({ cartItemDetails }) => {
+  if (!cartItemDetails) return null;
 
-const CartItem = (props) => {
-  const { cartItemDetails } = props;
-  const { id, product, quantity } = cartItemDetails; // id = cartItem id
-  const { id: productId, image, name, price } = product; // product fields
+  const { id, product, newArrival, quantity = 0 } = cartItemDetails;
+
+  // ✅ pick whichever exists
+  const item = product || newArrival;
+  if (!item) return null;
+
+  const { name = "Item", price = 0, image = "" } = item;
 
   const { deleteCartItem, updateQuantity } = useContext(CartContext);
 
   const handleDecrease = () => {
-    if (quantity > 1) {
-      updateQuantity(id, quantity - 1);  // decrement
-    } else {
-      deleteCartItem(id);  // remove if only 1 left
-    }
+    if (quantity > 1) updateQuantity(id, quantity - 1);
+    else deleteCartItem(id);
   };
 
-  const handleIncrease = () => {
-    updateQuantity(id, quantity + 1);  // increment
-  };
+  const handleIncrease = () => updateQuantity(id, quantity + 1);
 
   return (
     <li className="cart-item">
@@ -30,10 +30,8 @@ const CartItem = (props) => {
       <div className="cart-item-details-container">
         <div className="cart-product-title-brand-container">
           <p className="cart-product-title">{name}</p>
-          {/* Remove brand if not available */}
         </div>
 
-        {/* Quantity Controls */}
         <div className="cart-quantity-container">
           <button
             type="button"
@@ -52,20 +50,18 @@ const CartItem = (props) => {
           </button>
         </div>
 
-        {/* Price + Remove Button */}
         <div className="total-price-delete-container">
-          <p className="cart-total-price">Rs {price * quantity}/-</p>
+          <p className="cart-total-price">₹ {price * quantity}/-</p>
           <button
             className="remove-button"
             type="button"
-            onClick={() => deleteCartItem(id)} // pass cartItem id
+            onClick={() => deleteCartItem(id)}
           >
             Remove
           </button>
         </div>
       </div>
 
-      {/* Icon remove */}
       <button
         className="delete-button"
         type="button"

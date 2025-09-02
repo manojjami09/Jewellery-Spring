@@ -49,20 +49,31 @@ export default function App() {
         console.error("Invalid JWT token:", err);
       }
     }, []);
+//add cart item
+const addCartItem = async ({ productId = null, newArrivalId = null, quantity = 1 }) => {
+  if (!userId) {
+    alert("Please login first!");
+    return;
+  }
+
+  try {
+    const res = await api.post(`/${userId}/add`, null, {
+      params: { productId, newArrivalId, quantity },
+    });
+
+    setCartList(res.data.items || []); // update context immediately
+    return res.data; // optionally return the updated cart
+  } catch (err) {
+    console.error("Error adding item to cart:", err);
+    alert("Failed to add item to cart. Please try again.");
+  }
+};
 
   // Clear cart when userId changes
   useEffect(() => {
     setCartList([]); // remove previous user's cart immediately
   }, [userId]);
 
-  // Add item to cart
-  const addCartItem = (product) => {
-    if (!userId) return;
-
-    api.post(`/${userId}/add`, { productId: product.id, quantity: product.quantity || 1 })
-      .then(res => setCartList(res.data.items || []))
-      .catch(err => console.error("Error adding item:", err));
-  };
 
   // Delete item from cart
   const deleteCartItem = async (productId) => {
