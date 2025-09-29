@@ -14,20 +14,26 @@ import lombok.NoArgsConstructor;
 @Builder
 @Table(name="cartItems")
 public class CartItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // Many cart items belong to one cart
     @ManyToOne
-    @JoinColumn(name = "cart_id")
+    @JoinColumn(name = "cart_id", nullable = false)
     @JsonBackReference
     private Cart cart;
 
-    // Each cart item points to a product
+    // Product reference (optional, only set if it's a product)
     @ManyToOne
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = true)
     private Product product;
+
+    // NewArrival reference (optional, only set if it's a new arrival)
+    @ManyToOne
+    @JoinColumn(name = "new_arrival_id", nullable = true)
+    private NewArrival newArrival;
 
     private int quantity;
 }

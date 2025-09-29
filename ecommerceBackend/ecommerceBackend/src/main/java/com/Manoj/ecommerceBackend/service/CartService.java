@@ -1,13 +1,7 @@
 package com.Manoj.ecommerceBackend.service;
 
-import com.Manoj.ecommerceBackend.Entity.Cart;
-import com.Manoj.ecommerceBackend.Entity.CartItem;
-import com.Manoj.ecommerceBackend.Entity.Product;
-import com.Manoj.ecommerceBackend.Entity.User;
-import com.Manoj.ecommerceBackend.repo.CartItemRepository;
-import com.Manoj.ecommerceBackend.repo.CartRepository;
-import com.Manoj.ecommerceBackend.repo.ProductRepository;
-import com.Manoj.ecommerceBackend.repo.UserRepository;
+import com.Manoj.ecommerceBackend.Entity.*;
+import com.Manoj.ecommerceBackend.repo.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,47 +16,70 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final NewArrivalsRepository newArrivalsRepository;
 
     /**
      * Add a product to user's cart (create cart if not exists).
      */
     @Transactional
-    public Cart addToCart(Long userId, Integer productId, int quantity) {
-        // 1. Find the user
-        User user = userRepository.findById(userId)
+    public Cart addToCart(Long userId, Integer productId, Integer newArrivalId, int quantity) {
+        // fetch user
+        var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. Get or create the cart
-        Cart cart = cartRepository.findByUser(user).orElseGet(() -> {
-            Cart newCart = Cart.builder()
-                    .user(user)
-                    .build();
+        // fetch or create cart
+        var cart = cartRepository.findByUser(user).orElseGet(() -> {
+            Cart newCart = Cart.builder().user(user).build();
             return cartRepository.save(newCart);
         });
 
-        // 3. Find product
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+        // Case 1: Product
+        if (productId != null) {
+            var product = productRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 4. Check if item already in cart
-        Optional<CartItem> existingItem = cartItemRepository.findByCartAndProduct(cart, product);
-
-        if (existingItem.isPresent()) {
-            CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
-            cartItemRepository.save(item);
-        } else {
-            CartItem newItem = CartItem.builder()
-                    .cart(cart)
-                    .product(product)
-                    .quantity(quantity)
-                    .build();
-            cartItemRepository.save(newItem);
-            cart.getItems().add(newItem); // maintain both sides
+            var existingItem = cartItemRepository.findByCartAndProduct(cart, product);
+            if (existingItem.isPresent()) {
+                existingItem.get().setQuantity(existingItem.get().getQuantity() + quantity);
+                cartItemRepository.save(existingItem.get());
+            } else {
+                CartItem newItem = CartItem.builder()
+                        .cart(cart)
+                        .product(product)
+                        .quantity(quantity)
+                        .build();
+                cartItemRepository.save(newItem);
+                cart.getItems().add(newItem);
+            }
         }
 
-        return cartRepository.save(cart); // ensure cart is updated
+        // Case 2: NewArrival
+        else if (newArrivalId != null) {
+            var newArrival = newArrivalsRepository.findById(newArrivalId)
+                    .orElseThrow(() -> new RuntimeException("New Arrival not found"));
+
+            var existingItem = cartItemRepository.findByCartAndNewArrival(cart, newArrival);
+            if (existingItem.isPresent()) {
+                existingItem.get().setQuantity(existingItem.get().getQuantity() + quantity);
+                cartItemRepository.save(existingItem.get());
+            } else {
+                CartItem newItem = CartItem.builder()
+                        .cart(cart)
+                        .newArrival(newArrival)
+                        .quantity(quantity)
+                        .build();
+                cartItemRepository.save(newItem);
+                cart.getItems().add(newItem);
+            }
+        }
+
+        else {
+            throw new RuntimeException("Either productId or newArrivalId must be provided");
+        }
+
+        return cartRepository.save(cart);
     }
+
 
     /**
      * Get user's cart with items.
